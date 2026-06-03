@@ -156,10 +156,10 @@ def _build_mock_summary(tasks: list, reviews: dict, stats: dict) -> str:
     return "\n".join(lines)
 
 
-def _call_ai_api(user_content: str) -> str | None:
-    """调用兼容 OpenAI 格式的大模型 API"""
+def _call_ai_api(user_content: str) -> tuple[str | None, str]:
+    """调用兼容 OpenAI 格式的大模型 API，返回 (结果, 说明)"""
     if not Config.AI_API_KEY or not Config.AI_BASE_URL:
-        return None
+        return None, "未配置 AI_API_KEY 和 AI_BASE_URL"
 
     url = Config.AI_BASE_URL.rstrip("/") + "/chat/completions"
     body = json.dumps({
@@ -179,13 +179,17 @@ def _call_ai_api(user_content: str) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
             result = json.loads(resp.read().decode("utf-8"))
-            return result["choices"][0]["message"]["content"]
-    except Exception:
-        return None
+            content = result["choices"][0]["message"]["content"]
+            return content, f"AI 生成成功（模型：{Config.AI_MODEL}）"
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        return None, f"AI 接口返回错误 {e.code}：{error_body[:200]}"
+    except Exception as e:
+        return None, f"AI 调用异常：{str(e)[:200]}"
 
 
-def generate_daily_summary(user_id: int, date: str) -> str:
-    """生成今日小结，优先调用 AI，失败则返回 Mock"""
+def generate_daily_summary(user_id: int, date: str) -> tuple[str, str]:
+    """生成今日小结，优先调用 AI，失败则返回 Mock。返回 (内容, 来源说明)"""
     # 查询当天所有任务
     tasks = execute_query(
         "SELECT * FROM tasks WHERE user_id = %s AND task_date = %s ORDER BY planned_start_time ASC",
@@ -241,9 +245,12 @@ def generate_daily_summary(user_id: int, date: str) -> str:
             user_content_parts.append("")
 
         user_content = "\n".join(user_content_parts)
-        ai_result = _call_ai_api(user_content)
+        ai_result, ai_info = _call_ai_api(user_content)
         if ai_result:
-            return ai_result
+            return ai_result, ai_info
+        else:
+            # AI 调用失败，降级到 Mock，但仍然返回 Mock 内容
+            return _build_mock_summary(tasks, reviews, stats), f"（AI 不可用：{ai_info}，已降级为本地生成）"
 
     # 降级到 Mock
-    return _build_mock_summary(tasks, reviews, stats)
+    return _build_mock_summary(tasks, reviews, stats), "（未配置 AI，使用本地模板生成。配置 AI_API_KEY 后可调用大模型动态生成）"

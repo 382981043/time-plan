@@ -20,10 +20,10 @@ class Config:
     JWT_SECRET = os.getenv("JWT_SECRET", "please_change_this_secret")
     TOKEN_EXPIRE_HOURS = int(os.getenv("TOKEN_EXPIRE_HOURS", "168"))
 
-    # AI
-    AI_API_KEY = os.getenv("AI_API_KEY", "")
-    AI_BASE_URL = os.getenv("AI_BASE_URL", "")
-    AI_MODEL = os.getenv("AI_MODEL", "")
+    # AI 大模型配置（兼容 OpenAI 格式的 API）
+    AI_API_KEY = os.getenv("AI_API_KEY", "sk-23f7337454ca4d76852fc430aec599be")
+    AI_BASE_URL = os.getenv("AI_BASE_URL", "https://api.deepseek.com")
+    AI_MODEL = os.getenv("AI_MODEL", "deepseek-chat")
 
     # 调试模式
     DEBUG = FLASK_ENV == "development"

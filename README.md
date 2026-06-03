@@ -51,29 +51,39 @@ smart-plan-flask/
     └── style.css          # 样式
 ```
 
-## 快速开始
+## 🚀 快速启动（只需 2 步）
 
-### 1. 创建 MySQL 数据库
+### 前提条件
+- 已安装 Python 3
+- 已安装 MySQL 且服务正在运行
 
-确保已安装 MySQL，然后执行建表 SQL：
+### 步骤 1：配置数据库密码
 
+编辑 `config.py`，修改 MySQL 密码为你的真实密码：
+
+```python
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "你的密码")
+```
+
+### 步骤 2：一键启动
+
+**Windows** — 双击 `start.bat`
+
+**macOS / Linux** — 终端执行：
 ```bash
-mysql -u root -p < db/schema.sql
+python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python app.py
 ```
 
-或者手动创建：
+首次启动会自动创建数据库和表结构。之后每次只需双击 `start.bat` 即可。
 
-```sql
-CREATE DATABASE IF NOT EXISTS smart_plan DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci;
-USE smart_plan;
--- 然后执行 db/schema.sql 中的建表语句
-```
+浏览器打开 **http://127.0.0.1:5000** 开始使用。
 
-### 2. 创建 Python 虚拟环境
+---
+
+### 手动启动（备选）
 
 ```bash
 cd smart-plan-flask
-
 python -m venv venv
 
 # Windows
@@ -81,40 +91,10 @@ venv\Scripts\activate
 
 # macOS / Linux
 source venv/bin/activate
-```
 
-### 3. 安装依赖
-
-```bash
 pip install -r requirements.txt
+python app.py  # 首次自动建库建表
 ```
-
-### 4. 配置环境变量
-
-方式一：直接修改 `config.py` 中的默认值（最简单）。
-
-方式二：设置环境变量（Windows PowerShell）：
-
-```powershell
-$env:MYSQL_HOST="127.0.0.1"
-$env:MYSQL_PORT="3306"
-$env:MYSQL_USER="root"
-$env:MYSQL_PASSWORD="your_password"
-$env:MYSQL_DATABASE="smart_plan"
-$env:JWT_SECRET="your_secret_key"
-```
-
-方式三：复制 `.env.example` 为 `.env` 并手动 source（需要 python-dotenv 或手动设置）。
-
-### 5. 启动应用
-
-```bash
-python app.py
-```
-
-### 6. 访问系统
-
-浏览器打开：**http://127.0.0.1:5000**
 
 ## API 接口概览
 

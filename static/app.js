@@ -167,6 +167,14 @@
     const status = document.getElementById('filter-status').value;
     const quadrant = document.getElementById('filter-quadrant').value;
 
+    // P1: 加载统计数据
+    renderStats();
+
+    // 优化2: 检测昨日未完成任务（仅在看今天的任务时）
+    if (date === todayStr()) {
+      checkYesterdayTasks();
+    }
+
     let query = `?date=${date}`;
     if (status) query += `&status=${status}`;
     if (quadrant) query += `&quadrant=${quadrant}`;
@@ -176,12 +184,16 @@
     const container = document.getElementById('task-list');
 
     if (tasks.length === 0) {
-      container.innerHTML = '<div class="empty-state">暂无任务，点击右上角「新增任务」开始规划今天吧！</div>';
+      container.innerHTML = '<div class="empty-state">暂无任务，点击右上角「新增任务」或上方快速添加开始规划今天吧！</div>';
       return;
     }
 
-    container.innerHTML = tasks.map(t => `
-      <div class="task-card">
+    container.innerHTML = tasks.map(t => {
+      const isDone = t.status === 'DONE';
+      const isInProgress = t.status === 'IN_PROGRESS';
+      const cardClass = isDone ? 'task-card task-done' : 'task-card';
+      return `
+      <div class="${cardClass}" id="task-${t.id}">
         <div class="task-card-left">
           <div class="task-card-title">${escHtml(t.title)}</div>
           ${t.description ? `<div class="task-card-desc">${escHtml(t.description)}</div>` : ''}
@@ -192,12 +204,133 @@
           </div>
         </div>
         <div class="task-card-actions">
+          ${!isDone && !isInProgress ? `<button class="btn btn-sm btn-start" onclick="window._spStart(${t.id})" title="开始">▶</button>` : ''}
+          ${!isDone ? `<button class="btn btn-sm btn-done" onclick="window._spDone(${t.id})" title="完成">✓</button>` : ''}
           <button class="btn btn-sm btn-ghost" onclick="window._spEdit(${t.id})">编辑</button>
           <button class="btn btn-sm btn-ghost" onclick="window._spReview(${t.id})">复盘</button>
           <button class="btn btn-sm btn-ghost" style="color:var(--color-danger)" onclick="window._spDelete(${t.id})">删除</button>
         </div>
       </div>
-    `).join('');
+    `}).join('');
+  }
+
+  // ========== 优化1: 快捷状态操作 ==========
+  async function quickStatus(taskId, newStatus) {
+    try {
+      await API.request('PATCH', '/tasks/' + taskId + '/status', { status: newStatus });
+      if (newStatus === 'DONE') {
+        // 完成动画
+        const card = document.getElementById('task-' + taskId);
+        if (card) {
+          card.classList.add('task-completing');
+          setTimeout(() => renderDashboard(), 400);
+          return;
+        }
+      }
+      renderDashboard();
+    } catch (e) {
+      alert('操作失败：' + e.message);
+    }
+  }
+
+  window._spStart = function(id) { quickStatus(id, 'IN_PROGRESS'); };
+  window._spDone = function(id) { quickStatus(id, 'DONE'); };
+
+  // ========== 优化2: 昨日任务迁移 ==========
+  async function checkYesterdayTasks() {
+    try {
+      const res = await API.get('/tasks/yesterday-unfinished');
+      if (!res.success || res.data.count === 0) return;
+
+      // 检查是否已有迁移横幅
+      if (document.getElementById('migrate-banner')) return;
+
+      const banner = document.createElement('div');
+      banner.id = 'migrate-banner';
+      banner.className = 'migrate-banner';
+      banner.innerHTML = `
+        <span>📌 昨天有 <strong>${res.data.count}</strong> 个任务未完成</span>
+        <div class="migrate-actions">
+          <button class="btn btn-sm btn-accent" onclick="window._spMigrateAll(${JSON.stringify(res.data.tasks.map(t=>t.id))})">一键迁移</button>
+          <button class="btn btn-sm btn-ghost" onclick="this.parentElement.parentElement.remove()">✕</button>
+        </div>
+      `;
+      const dashPage = document.getElementById('page-dashboard');
+      const pageHeader = dashPage.querySelector('.page-header');
+      pageHeader.after(banner);
+    } catch (e) { /* silent */ }
+  }
+
+  window._spMigrateAll = async function(ids) {
+    let count = 0;
+    for (const id of ids) {
+      try {
+        await API.post('/tasks/' + id + '/migrate');
+        count++;
+      } catch (e) { /* skip */ }
+    }
+    const banner = document.getElementById('migrate-banner');
+    if (banner) banner.remove();
+    if (count > 0) alert(`✅ 已迁移 ${count} 个任务到今天`);
+    renderDashboard();
+  };
+
+  // ========== P1: 成就统计 ==========
+  async function renderStats() {
+    try {
+      const res = await API.get('/tasks/stats');
+      if (!res.success) return;
+      const s = res.data;
+      const container = document.getElementById('dash-stats');
+      container.innerHTML = `
+        <div class="stat-card">
+          <div class="stat-num">${s.today.done}/${s.today.total}</div>
+          <div class="stat-label">今日完成率</div>
+          ${s.today.total > 0 ? `<div class="stat-bar"><div class="stat-bar-fill" style="width:${s.today.rate}%"></div></div>` : ''}
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">🔥 ${s.streak}</div>
+          <div class="stat-label">连续打卡天数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">${s.week.rate}%</div>
+          <div class="stat-label">本周完成率</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:${s.week.rate}%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">${s.week.done}/${s.week.total}</div>
+          <div class="stat-label">本周已完成</div>
+        </div>
+      `;
+    } catch (e) { /* silent */ }
+  }
+
+  // ========== P0: 快速添加任务 ==========
+  async function quickAddTask() {
+    const input = document.getElementById('quick-add-input');
+    const btn = document.getElementById('btn-quick-add');
+    const text = input.value.trim();
+    if (!text) return;
+
+    btn.disabled = true;
+    btn.textContent = '解析中...';
+    try {
+      const res = await API.post('/tasks/quick', { text });
+      if (res.success) {
+        input.value = '';
+        // 显示解析来源
+        const sourceTag = res.data.parsed_by === 'AI 智能解析' ? '🤖' : '⚡';
+        alert(`${sourceTag} 任务「${res.data.task.title}」创建成功`);
+        renderDashboard();
+      } else {
+        alert('创建失败：' + res.message);
+      }
+    } catch (e) {
+      alert('创建失败：' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '添加';
+    }
   }
 
   function escHtml(str) {
@@ -450,8 +583,19 @@
     try {
       const res = await API.post('/daily-reviews/generate', { date });
       if (res.success) {
-        document.getElementById('dr-summary-content').style.display = '';
-        document.getElementById('dr-summary-content').innerHTML = renderMarkdown(res.data.summary);
+        const container = document.getElementById('dr-summary-content');
+        container.style.display = '';
+        const rawMarkdown = res.data.summary;
+
+        // AI 来源说明 + 复制按钮
+        let sourceHtml = '';
+        if (res.data.source) {
+          const isAI = res.data.source.includes('AI 生成');
+          sourceHtml = `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;margin-bottom:12px;border-radius:6px;font-size:12px;${isAI ? 'background:#DCFCE7;color:#166534;' : 'background:#FEF3C7;color:#92400E;'}"><span>🤖 ${escHtml(res.data.source)}</span><button class="btn btn-sm btn-ghost" onclick="window._spCopySummary()" style="font-size:12px;">📋 复制</button></div>`;
+        }
+        // 存储原始 markdown 供复制使用
+        container.setAttribute('data-markdown', rawMarkdown);
+        container.innerHTML = sourceHtml + renderMarkdown(rawMarkdown);
       }
     } catch (e) {
       alert('生成失败：' + e.message);
@@ -459,6 +603,33 @@
       btn.disabled = false;
       loading.style.display = 'none';
     }
+  }
+
+  // 优化3: 复制 AI 小结
+  window._spCopySummary = function() {
+    const container = document.getElementById('dr-summary-content');
+    const md = container.getAttribute('data-markdown') || '';
+    if (!md) return;
+    navigator.clipboard.writeText(md).then(() => {
+      showToast('✅ 已复制，可直接粘贴到日报');
+    }).catch(() => {
+      // 降级方案
+      const ta = document.createElement('textarea');
+      ta.value = md; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      showToast('✅ 已复制');
+    });
+  };
+
+  function showToast(msg) {
+    const existing = document.querySelector('.toast-msg');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
   }
 
   function renderMarkdown(md) {
@@ -622,6 +793,12 @@
   // 新增任务按钮
   document.getElementById('btn-new-task').addEventListener('click', function () {
     navigate('#/task-form');
+  });
+
+  // P0: 快速添加
+  document.getElementById('btn-quick-add').addEventListener('click', quickAddTask);
+  document.getElementById('quick-add-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); quickAddTask(); }
   });
 
   // 退出登录

@@ -58,7 +58,7 @@ def generate_summary():
         return fail("请提供日期 date (YYYY-MM-DD)")
 
     # 生成 AI 今日小结
-    summary = ai_service.generate_daily_summary(user_id, date)
+    summary, source_info = ai_service.generate_daily_summary(user_id, date)
 
     # 查询统计信息
     tasks = task_service.get_tasks(user_id, date)
@@ -78,6 +78,7 @@ def generate_summary():
     # 保存到数据库
     stats["date"] = date
     stats["ai_summary"] = summary
+    stats["ai_source"] = source_info
     daily_review = review_service.save_daily_review(user_id, date, stats)
 
-    return success({"daily_review": daily_review, "summary": summary}, "今日小结生成成功")
+    return success({"daily_review": daily_review, "summary": summary, "source": source_info}, "今日小结生成成功")
