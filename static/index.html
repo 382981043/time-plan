@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPlan 时间规划助手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ========== 未登录：登录/注册页 ========== -->
+<div id="page-login" class="page auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>SmartPlan</h1>
+      <p>时间规划助手 · SMART 法则 + 四象限</p>
+    </div>
+    <form id="login-form" class="auth-form">
+      <div class="form-group">
+        <label for="login-email">邮箱</label>
+        <input type="email" id="login-email" placeholder="请输入邮箱" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="login-password">密码</label>
+        <input type="password" id="login-password" placeholder="请输入密码" required autocomplete="current-password">
+      </div>
+      <div id="login-error" class="form-error" style="display:none;"></div>
+      <button type="submit" class="btn btn-primary btn-full">登录</button>
+    </form>
+    <div class="auth-footer">
+      还没有账号？<a href="#/register" class="link">立即注册</a>
+    </div>
+  </div>
+</div>
+
+<div id="page-register" class="page auth-page" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>SmartPlan</h1>
+      <p>创建你的时间规划账号</p>
+    </div>
+    <form id="register-form" class="auth-form">
+      <div class="form-group">
+        <label for="reg-username">用户名</label>
+        <input type="text" id="reg-username" placeholder="请输入用户名" required>
+      </div>
+      <div class="form-group">
+        <label for="reg-email">邮箱</label>
+        <input type="email" id="reg-email" placeholder="请输入邮箱" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="reg-password">密码</label>
+        <input type="password" id="reg-password" placeholder="至少 6 位密码" required minlength="6" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label for="reg-password2">确认密码</label>
+        <input type="password" id="reg-password2" placeholder="再次输入密码" required minlength="6" autocomplete="new-password">
+      </div>
+      <div id="register-error" class="form-error" style="display:none;"></div>
+      <button type="submit" class="btn btn-primary btn-full">注册</button>
+    </form>
+    <div class="auth-footer">
+      已有账号？<a href="#/login" class="link">返回登录</a>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 登录后：主布局 ========== -->
+<div id="app-main" style="display:none;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="#/dashboard" class="nav-brand">SmartPlan</a>
+      <div class="nav-links">
+        <a href="#/dashboard" class="nav-link" data-nav="dashboard">今日计划</a>
+        <a href="#/quadrant" class="nav-link" data-nav="quadrant">四象限</a>
+        <a href="#/daily-review" class="nav-link" data-nav="daily-review">今日复盘</a>
+        <a href="#/profile" class="nav-link" data-nav="profile">个人中心</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- 今日计划页 -->
+    <div id="page-dashboard" class="page">
+      <div class="page-header">
+        <h2>今日计划</h2>
+        <div class="page-header-actions">
+          <input type="date" id="dash-date" class="input-date">
+          <button id="btn-new-task" class="btn btn-primary">+ 新增任务</button>
+        </div>
+      </div>
+      <div class="filters">
+        <select id="filter-status" class="select-filter">
+          <option value="">全部状态</option>
+          <option value="TODO">TODO</option>
+          <option value="IN_PROGRESS">进行中</option>
+          <option value="DONE">已完成</option>
+          <option value="UNDONE">未完成</option>
+          <option value="CANCELLED">已取消</option>
+        </select>
+        <select id="filter-quadrant" class="select-filter">
+          <option value="">全部象限</option>
+          <option value="IMPORTANT_URGENT">重要且紧急</option>
+          <option value="IMPORTANT_NOT_URGENT">重要但不紧急</option>
+          <option value="NOT_IMPORTANT_URGENT">不重要但紧急</option>
+          <option value="NOT_IMPORTANT_NOT_URGENT">不重要且不紧急</option>
+        </select>
+      </div>
+      <div id="task-list" class="task-list">
+        <div class="empty-state">暂无任务，点击右上角「新增任务」开始规划今天吧！</div>
+      </div>
+    </div>
+
+    <!-- 任务表单页 -->
+    <div id="page-task-form" class="page" style="display:none;">
+      <div class="page-header">
+        <h2 id="task-form-title">新增任务</h2>
+        <a href="#/dashboard" class="btn btn-ghost">← 返回</a>
+      </div>
+      <form id="task-form" class="card-form">
+        <input type="hidden" id="tf-id">
+
+        <fieldset class="form-section">
+          <legend>基础信息</legend>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="tf-title">任务标题 <span class="required">*</span></label>
+              <input type="text" id="tf-title" placeholder="例如：完成项目日报" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tf-date">任务日期 <span class="required">*</span></label>
+              <input type="date" id="tf-date" required>
+            </div>
+            <div class="form-group">
+              <label for="tf-status">任务状态</label>
+              <select id="tf-status">
+                <option value="TODO">TODO</option>
+                <option value="IN_PROGRESS">进行中</option>
+                <option value="DONE">已完成</option>
+                <option value="UNDONE">未完成</option>
+                <option value="CANCELLED">已取消</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tf-start">预计开始时间</label>
+              <input type="time" id="tf-start">
+            </div>
+            <div class="form-group">
+              <label for="tf-end">预计结束时间</label>
+              <input type="time" id="tf-end">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="tf-desc">任务描述</label>
+              <textarea id="tf-desc" rows="3" placeholder="详细描述任务内容..."></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>SMART 法则</legend>
+          <div class="smart-grid">
+            <div class="form-group">
+              <label for="tf-s">
+                <span class="smart-label">S</span> Specific - 具体明确 <span class="required">*</span>
+              </label>
+              <input type="text" id="tf-s" placeholder="这个任务具体要完成什么？" required>
+              <span class="form-hint">💡 提示：尽可能清晰描述任务的最终产出</span>
+            </div>
+            <div class="form-group">
+              <label for="tf-m">
+                <span class="smart-label">M</span> Measurable - 可衡量 <span class="required">*</span>
+              </label>
+              <input type="text" id="tf-m" placeholder="通过什么标准判断任务完成？" required>
+              <span class="form-hint">💡 提示：例如"写完 3 段内容"、"回复 5 封邮件"</span>
+            </div>
+            <div class="form-group">
+              <label for="tf-a">
+                <span class="smart-label">A</span> Achievable - 可实现
+              </label>
+              <input type="text" id="tf-a" placeholder="完成这个任务需要哪些条件？今天是否具备？">
+              <span class="form-hint">💡 提示：确认今天有足够的时间和资源完成</span>
+            </div>
+            <div class="form-group">
+              <label for="tf-r">
+                <span class="smart-label">R</span> Relevant - 相关性
+              </label>
+              <input type="text" id="tf-r" placeholder="这个任务和你的目标、工作或学习有什么关系？">
+              <span class="form-hint">💡 提示：这能帮助你判断任务的优先级</span>
+            </div>
+            <div class="form-group">
+              <label for="tf-t">
+                <span class="smart-label">T</span> Time-bound - 有时限 <span class="required">*</span>
+              </label>
+              <input type="text" id="tf-t" placeholder="这个任务需要在什么时间前完成？" required>
+              <span class="form-hint">💡 提示：例如"今天上午 10 点前"、"下班前"</span>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>四象限分类</legend>
+          <div class="quadrant-select">
+            <label class="checkbox-label">
+              <input type="checkbox" id="tf-important"> 重要
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="tf-urgent"> 紧急
+            </label>
+            <span id="quadrant-preview" class="quadrant-preview"></span>
+          </div>
+        </fieldset>
+
+        <div id="task-form-error" class="form-error" style="display:none;"></div>
+        <div class="form-actions">
+          <a href="#/dashboard" class="btn btn-ghost">取消</a>
+          <button type="submit" class="btn btn-primary">保存任务</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 四象限页 -->
+    <div id="page-quadrant" class="page" style="display:none;">
+      <div class="page-header">
+        <h2>四象限视图</h2>
+        <input type="date" id="quad-date" class="input-date">
+      </div>
+      <div class="quadrant-grid">
+        <div class="quadrant-box q-iu">
+          <h3>🔴 重要且紧急</h3>
+          <div class="quadrant-tasks" id="quad-iu"></div>
+        </div>
+        <div class="quadrant-box q-inu">
+          <h3>🟡 重要但不紧急</h3>
+          <div class="quadrant-tasks" id="quad-inu"></div>
+        </div>
+        <div class="quadrant-box q-niu">
+          <h3>🟠 不重要但紧急</h3>
+          <div class="quadrant-tasks" id="quad-niu"></div>
+        </div>
+        <div class="quadrant-box q-ninu">
+          <h3>🟢 不重要且不紧急</h3>
+          <div class="quadrant-tasks" id="quad-ninu"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务复盘页 -->
+    <div id="page-task-review" class="page" style="display:none;">
+      <div class="page-header">
+        <h2>任务复盘</h2>
+        <a href="#/dashboard" class="btn btn-ghost">← 返回</a>
+      </div>
+      <div id="review-task-info" class="card"></div>
+      <form id="review-form" class="card-form">
+        <fieldset class="form-section">
+          <legend>复盘信息</legend>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rv-start">实际开始时间</label>
+              <input type="time" id="rv-start">
+            </div>
+            <div class="form-group">
+              <label for="rv-end">实际结束时间</label>
+              <input type="time" id="rv-end">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label class="checkbox-label">
+                <input type="checkbox" id="rv-completed"> 任务已完成
+              </label>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="rv-note">完成情况说明</label>
+              <textarea id="rv-note" rows="2" placeholder="描述任务完成的具体情况..."></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="rv-reason">未完成原因</label>
+              <textarea id="rv-reason" rows="2" placeholder="如果未完成，请记录原因..."></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="rv-problems">遇到的问题</label>
+              <textarea id="rv-problems" rows="2" placeholder="执行过程中遇到了哪些问题？"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="rv-learnings">收获</label>
+              <textarea id="rv-learnings" rows="2" placeholder="从这次任务中收获了什么？"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="rv-improvement">下次改进</label>
+              <textarea id="rv-improvement" rows="2" placeholder="下次如何做得更好？"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rv-rating">自我评分 (1-5)</label>
+              <select id="rv-rating">
+                <option value="">请选择</option>
+                <option value="1">1 - 很差</option>
+                <option value="2">2 - 较差</option>
+                <option value="3">3 - 一般</option>
+                <option value="4">4 - 良好</option>
+                <option value="5">5 - 优秀</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+        <div id="review-error" class="form-error" style="display:none;"></div>
+        <div class="form-actions">
+          <a href="#/dashboard" class="btn btn-ghost">取消</a>
+          <button type="submit" class="btn btn-primary">保存复盘</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 今日复盘页 -->
+    <div id="page-daily-review" class="page" style="display:none;">
+      <div class="page-header">
+        <h2>今日复盘</h2>
+        <input type="date" id="dr-date" class="input-date">
+      </div>
+      <div id="dr-stats" class="stats-cards"></div>
+      <div class="card">
+        <h3>任务复盘摘要</h3>
+        <div id="dr-reviews-summary"></div>
+      </div>
+      <div style="margin: 16px 0;">
+        <button id="btn-generate-summary" class="btn btn-accent">🤖 生成 AI 今日小结</button>
+        <span id="dr-generating" style="display:none;margin-left:8px;color:#666;">生成中...</span>
+      </div>
+      <div id="dr-summary-content" class="card markdown-body" style="display:none;"></div>
+    </div>
+
+    <!-- 个人中心页 -->
+    <div id="page-profile" class="page" style="display:none;">
+      <div class="page-header">
+        <h2>个人中心</h2>
+      </div>
+      <div class="card">
+        <div class="profile-info">
+          <div class="profile-avatar">👤</div>
+          <div class="profile-detail">
+            <p><strong id="prof-username"></strong></p>
+            <p id="prof-email" class="text-muted"></p>
+          </div>
+        </div>
+        <button id="btn-logout" class="btn btn-danger" style="margin-top:16px;">退出登录</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
