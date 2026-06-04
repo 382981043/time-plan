@@ -201,7 +201,7 @@
           <div class="task-card-meta">
             ${getStatusBadge(t.status)}
             ${getQuadrantBadge(t.quadrant)}
-            ${t.planned_start_time ? `<span>🕐 ${t.planned_start_time}${t.planned_end_time ? ' - ' + t.planned_end_time : ''}</span>` : ''}
+            ${fmtTime(t.planned_start_time) ? `<span>🕐 ${fmtTime(t.planned_start_time)}${fmtTime(t.planned_end_time) ? ' - ' + fmtTime(t.planned_end_time) : ''}</span>` : ''}
           </div>
         </div>
         <div class="task-card-actions">
@@ -342,8 +342,13 @@
 
   function escHtml(str) {
     const div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = str || '';
     return div.innerHTML;
+  }
+
+  function fmtTime(t) {
+    if (!t || t === '00:00:00') return '';
+    return t;
   }
 
   // --- Task Form ---
@@ -476,7 +481,7 @@
       <h3>${escHtml(t.title)}</h3>
       <div class="review-task-summary">
         <p><span class="label-inline">状态：</span>${getStatusBadge(t.status)} ${getQuadrantBadge(t.quadrant)}</p>
-        <p><span class="label-inline">计划时间：</span>${t.planned_start_time || '-'} ~ ${t.planned_end_time || '-'}</p>
+        <p><span class="label-inline">计划时间：</span>${fmtTime(t.planned_start_time) || '-'} ~ ${fmtTime(t.planned_end_time) || '-'}</p>
         <p><span class="label-inline">S：</span>${escHtml(t.smart_specific || '')}</p>
         <p><span class="label-inline">M：</span>${escHtml(t.smart_measurable || '')}</p>
         <p><span class="label-inline">A：</span>${escHtml(t.smart_achievable || '')}</p>
