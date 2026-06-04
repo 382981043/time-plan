@@ -207,12 +207,16 @@ def quick_create():
     if parsed is None:
         parsed = _quick_parse_simple(raw_text)
 
-    # 3. 补全默认值
+    # 3. 补全默认值（包括必填字段，防止 AI 返回不完整）
+    parsed.setdefault("title", raw_text[:20].strip())
     parsed.setdefault("task_date", date_type.today().isoformat())
     parsed.setdefault("status", "TODO")
     parsed.setdefault("description", raw_text)
+    parsed.setdefault("smart_specific", raw_text[:100])
+    parsed.setdefault("smart_measurable", f"完成「{raw_text[:15]}」即视为达成")
     parsed.setdefault("smart_achievable", "")
     parsed.setdefault("smart_relevant", "")
+    parsed.setdefault("smart_time_bound", "今天完成")
     parsed.setdefault("important", False)
     parsed.setdefault("urgent", False)
     parsed.setdefault("planned_start_time", None)

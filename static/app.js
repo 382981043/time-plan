@@ -161,38 +161,39 @@
 
   // --- Dashboard ---
   async function renderDashboard() {
-    const dateEl = document.getElementById('dash-date');
-    if (!dateEl.value) dateEl.value = todayStr();
-    const date = dateEl.value;
-    const status = document.getElementById('filter-status').value;
-    const quadrant = document.getElementById('filter-quadrant').value;
+    try {
+      const dateEl = document.getElementById('dash-date');
+      if (!dateEl.value) dateEl.value = todayStr();
+      const date = dateEl.value;
+      const status = document.getElementById('filter-status').value;
+      const quadrant = document.getElementById('filter-quadrant').value;
 
-    // P1: 加载统计数据
-    renderStats();
+      // P1: 加载统计数据
+      renderStats();
 
-    // 优化2: 检测昨日未完成任务（仅在看今天的任务时）
-    if (date === todayStr()) {
-      checkYesterdayTasks();
-    }
+      // 优化2: 检测昨日未完成任务（仅在看今天的任务时）
+      if (date === todayStr()) {
+        checkYesterdayTasks();
+      }
 
-    let query = `?date=${date}`;
-    if (status) query += `&status=${status}`;
-    if (quadrant) query += `&quadrant=${quadrant}`;
+      let query = `?date=${date}`;
+      if (status) query += `&status=${status}`;
+      if (quadrant) query += `&quadrant=${quadrant}`;
 
-    const res = await API.get('/tasks' + query);
-    const tasks = res.data || [];
-    const container = document.getElementById('task-list');
+      const res = await API.get('/tasks' + query);
+      const tasks = res.data || [];
+      const container = document.getElementById('task-list');
 
-    if (tasks.length === 0) {
-      container.innerHTML = '<div class="empty-state">暂无任务，点击右上角「新增任务」或上方快速添加开始规划今天吧！</div>';
-      return;
-    }
+      if (tasks.length === 0) {
+        container.innerHTML = '<div class="empty-state">暂无任务，点击右上角「新增任务」或上方快速添加开始规划今天吧！</div>';
+        return;
+      }
 
-    container.innerHTML = tasks.map(t => {
-      const isDone = t.status === 'DONE';
-      const isInProgress = t.status === 'IN_PROGRESS';
-      const cardClass = isDone ? 'task-card task-done' : 'task-card';
-      return `
+      container.innerHTML = tasks.map(t => {
+        const isDone = t.status === 'DONE';
+        const isInProgress = t.status === 'IN_PROGRESS';
+        const cardClass = isDone ? 'task-card task-done' : 'task-card';
+        return `
       <div class="${cardClass}" id="task-${t.id}">
         <div class="task-card-left">
           <div class="task-card-title">${escHtml(t.title)}</div>
@@ -212,6 +213,11 @@
         </div>
       </div>
     `}).join('');
+    } catch (e) {
+      console.error('Dashboard 渲染失败：', e);
+      const container = document.getElementById('task-list');
+      container.innerHTML = '<div class="empty-state" style="color:var(--color-danger);">加载失败，请刷新页面重试</div>';
+    }
   }
 
   // ========== 优化1: 快捷状态操作 ==========
@@ -320,8 +326,9 @@
         input.value = '';
         // 显示解析来源
         const sourceTag = res.data.parsed_by === 'AI 智能解析' ? '🤖' : '⚡';
-        alert(`${sourceTag} 任务「${res.data.task.title}」创建成功`);
-        renderDashboard();
+        const taskTitle = res.data.task && res.data.task.title ? res.data.task.title : text.slice(0, 20);
+        showToast(`${sourceTag} 任务「${taskTitle}」创建成功`);
+        await renderDashboard();
       } else {
         alert('创建失败：' + res.message);
       }
@@ -329,7 +336,7 @@
       alert('创建失败：' + e.message);
     } finally {
       btn.disabled = false;
-      btn.textContent = '添加';
+      btn.textContent = '快速添加';
     }
   }
 
@@ -345,8 +352,23 @@
     document.getElementById('tf-id').value = taskId || '';
     document.getElementById('task-form-error').style.display = 'none';
 
+    // 清空所有表单字段
+    document.getElementById('tf-title').value = '';
+    document.getElementById('tf-date').value = todayStr();
+    document.getElementById('tf-status').value = 'TODO';
+    document.getElementById('tf-start').value = '';
+    document.getElementById('tf-end').value = '';
+    document.getElementById('tf-desc').value = '';
+    document.getElementById('tf-s').value = '';
+    document.getElementById('tf-m').value = '';
+    document.getElementById('tf-a').value = '';
+    document.getElementById('tf-r').value = '';
+    document.getElementById('tf-t').value = '';
+    document.getElementById('tf-important').checked = false;
+    document.getElementById('tf-urgent').checked = false;
+    getQuadrantPreview();
+
     if (!taskId) {
-      document.getElementById('tf-date').value = todayStr();
       return;
     }
 

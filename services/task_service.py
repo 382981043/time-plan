@@ -47,6 +47,23 @@ def create_task(user_id: int, data: dict) -> dict:
     urgent = data.get("urgent", False)
     quadrant = _calc_quadrant(important, urgent)
 
+    # 必填字段缺失时给出明确报错
+    title = data.get("title") or ""
+    task_date = data.get("task_date") or ""
+    smart_specific = data.get("smart_specific") or ""
+    smart_measurable = data.get("smart_measurable") or ""
+    smart_time_bound = data.get("smart_time_bound") or ""
+    if not title:
+        raise ValueError("任务标题不能为空")
+    if not task_date:
+        raise ValueError("任务日期不能为空")
+    if not smart_specific:
+        raise ValueError("SMART-Specific 不能为空")
+    if not smart_measurable:
+        raise ValueError("SMART-Measurable 不能为空")
+    if not smart_time_bound:
+        raise ValueError("SMART-TimeBound 不能为空")
+
     task_id = execute_insert(
         """INSERT INTO tasks
         (user_id, title, description, task_date, planned_start_time, planned_end_time,
@@ -55,17 +72,17 @@ def create_task(user_id: int, data: dict) -> dict:
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
         (
             user_id,
-            data["title"],
+            title,
             data.get("description", ""),
-            data["task_date"],
+            task_date,
             data.get("planned_start_time"),
             data.get("planned_end_time"),
             data.get("status", "TODO"),
-            data["smart_specific"],
-            data["smart_measurable"],
+            smart_specific,
+            smart_measurable,
             data.get("smart_achievable", ""),
             data.get("smart_relevant", ""),
-            data["smart_time_bound"],
+            smart_time_bound,
             important,
             urgent,
             quadrant,
